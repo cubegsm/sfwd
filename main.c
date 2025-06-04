@@ -2,6 +2,7 @@
  * Copyright(c) 2010-2016 Intel Corporation
  */
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,6 +38,7 @@
 #include <rte_mempool.h>
 #include <rte_mbuf.h>
 #include <rte_string_fns.h>
+#include "log.h"
 
 static volatile bool force_quit;
 
@@ -658,6 +660,8 @@ main(int argc, char **argv)
 	unsigned nb_ports_in_mask = 0;
 	unsigned int nb_lcores = 0;
 	unsigned int nb_mbufs;
+
+	log_trace("statring sfwd...");
 
 	/* Init EAL. 8< */
 	ret = rte_eal_init(argc, argv);

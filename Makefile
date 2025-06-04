@@ -5,7 +5,7 @@
 APP = l2fwd
 
 # all source are stored in SRCS-y
-SRCS-y := main.c
+SRCS-y := main.c log.c
 
 PKGCONF ?= pkg-config
 
