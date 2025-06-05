@@ -1,37 +1,50 @@
 # Introduction
 
-cfwd - Implementation a Simple DPDK-Based Packet Forwarder (based on l2fwd sample).
-In accordance with the requirements, changes were made to the l2fwd source code,
-which can be viewed in the commit history
+cfwd — A Simple DPDK-Based Packet Forwarder (based on the l2fwd and l3fwd sample).
+This application is a modified version of the standard DPDK samples to meet 
+custom requirements. All modifications can be reviewed in the Git commit history.
 
-Поставляемые фичи:
-1. Multi-core support (Для демонстрации используется двух ядерная настройка)
-2. Multi-queue support (Для демонстрации используется 2 очереди для каждого порта)
-3. Packet Processing Logic: гибкая система ACL фильтрации основанная на
-   подсистеме DPDK RTE ACL; парсер текстовых ACL правил c собственным userfriendly форматом
-4. Periodic real time traffic statistics: отображение пропускной способности, 
-   переданый байтов, пакетов и т.п. с помощью внешних утилит, bmon 4.0 например
-5. Parse incoming packets to extract basic Ethernet/IP header information.
-   Реализовано жесткое условие 'только IPv4' при обработке трафика.
-6. Modifycation packet headers (change the destination MAC address)
-7. Logging & Debugging: добавлена поддержка библиотеки логирования основанной
-   на открытом проекте log.c
+## Features
+
+    **Multi-core support**
+    Demonstrated with a dual-core configuration.
+
+    **Multi-queue support**
+    Each port is configured with 2 RX/TX queues for demonstration purposes.
+
+    **Packet Processing Logic**
+    A flexible ACL filtering system based on DPDK’s RTE ACL subsystem. 
+    Includes a parser for user-friendly text-based ACL rule files.
+
+    **Periodic Real-Time Traffic Statistics**
+    Bandwidth, packet, and byte counters can be observed using external tools
+    such as bmon 
+
+    **Packet Parsing**
+    Parses incoming packets to extract Ethernet/IP headers. 
+    Only IPv4 packets are processed; non-IPv4 traffic is dropped.
+
+    **Header Modification**
+    Supports modification of packet headers, such as destination MAC address.
+
+    **Logging & Debugging**
+    Integrated with a lightweight logging library based on the open-source project log.c.
 
 # Preparing for compilation, resolving dependencies
 
-You must have DPDK pre-installed
-and you must also install the following additional packages:
+Ensure that DPDK is pre-installed on your system.
+You also need the following additional packages:
 
 ```bash
 sudo apt install linux-headers-6.11.0-25-generic
 sudo apt install tcpreplay
+sudo apt install bmon
 ```
 
 # Setting up the DPDK environment
 
-For efficient operation of DPDK it is recommended to use hugetlb pages.
-To allocate hugetlb at the time of loading the Linux operating system kernel,
-it is necessary to configure grub accordingly:
+To optimize DPDK performance, it's recommended to use hugepages.
+You can set these up either at boot time or after system startup.
 
 Open the GRUB config file as root:
 
@@ -69,7 +82,7 @@ dpdk-hugepages.py -p 1G --setup 2G
 
 make
 
-# Run the application
+# Running the Application
 
 Command line to run the application:
 
@@ -84,9 +97,10 @@ sudo ./sfwd --no-pci -l 0-1 -n 4
     --config="(0,0,0),(0,1,0),(1,0,1),(1,1,1)"
 ```
 
-since it would be more convenient to use virtual network devices for development and debugging.
-And since DPDK can work with some virtual network devices, such as tap, for example.
-For debugging purposes, we will build such a test stand, based on TAP devices.
+To simplify development and debugging, virtual TAP devices are used. Since DPDK 
+supports virtual interfaces like TAP, we use the following setup:
+
+## Testbed Overview:
 
                 ┌──────────┐
                 │ tcpreplay│
@@ -110,50 +124,9 @@ For debugging purposes, we will build such a test stand, based on TAP devices.
                 │ tcpdump  │
                 └──────────┘
 
-# Параметры командной строки
-
-Все параметры, которые находятся до разграничителя '--' это опции DPDK EAL
-здесь используются некоторые из них:
-
-    -l 0-1
-    CPU core list — какие логические ядра будут использоваться для работы DPDK.
-    Здесь указаны ядра 0 и 1.
-
-    -n 4
-    Количество каналов памяти (memory channels) для доступа к памяти (часто связано с числом каналов 
-    памяти на платформе). Обычно 4 — стандартное значение для производительности.
-
-    --no-pci
-    Отключает сканирование физических PCI устройств (сетевая карта, NIC).
-
-    --vdev=net_tap0,iface=tap0
-    Создаёт первое виртуальное сетевое устройство TAP с именем tap0.
-
-    --vdev=net_tap1,iface=tap1
-    Создаёт второе виртуальное сетевое устройство TAP с именем tap1.
-
-Параметры приложения cfwd (через --)
-
-    --
-    Разделитель между параметрами EAL и параметрами самого приложения (cfwd).
-
-    -p 0x3
-    Port mask — битовая маска, указывающая какие порты будут использоваться приложением.
-    0x3 в двоичном виде — 11, т.е. первые два порта (0 и 1) активны.
-    В данном случае это соответствуют tap0 и tap1.
-
-    --rule_ipv4
-    --rule_ipv6
-    Используются для указания пути к ACL правилам фильтрации для протоколов 
-    IPv4 и IPv6 соответственно
-
-    --config (CPU, )
-    конфигурация для packet forwarding. 
-
 # Command line options
 
-All options before '--' delimiter are DPDK EAL options
-Some of them are used here:
+### DPDK EAL Options (before --)
 
     -l 0-1
     CPU core list — which logical cores will be used for DPDK operation.
@@ -181,7 +154,7 @@ Some of them are used here:
     --config (port,queue,lcore)[,(port,queue,lcore)]: 
     Determines which queues from which ports are mapped to which cores.
 
-cfwd application parameters (via --)
+### cfwd Application Options (after --)
 
     --
     Separator between standart EAL parameters and application parameters (cfwd).
@@ -193,9 +166,10 @@ cfwd application parameters (via --)
 
 # Debuging 
 
-after launching the application 
-После запуска приложения мы можем наблюдать отладосную информацию о правильности
-выделения пулов памяти, активации нужных ядер, использования правильных очередей
+After launching, the application outputs detailed logs showing memory pool allocation,
+core assignments, queue configurations, and more:
+
+### Example output:
 
 
 ```bash
@@ -236,15 +210,15 @@ L3FWD:  -- lcoreid=0 portid=0 rxqueueid=0
 L3FWD:  -- lcoreid=0 portid=0 rxqueueid=1
 ```
 
+# Traffic Replay and Verification
 
-we can forward the recorded traffic sample
-(samples can be taken from https://wiki.wireshark.org/SampleCaptures) to tap0
+Replay captured traffic to tap0:
 
 ```bash
 sudo tcpreplay --intf1=tap0 --multiplier=50 --loop=0 http.cap
 ```
 
-and see what comes to tap1
+Capture forwarded traffic on tap1:
 
 ```bash
 sk@sk:~$ sudo tcpdump -i tap1
@@ -285,16 +259,11 @@ tcpdump: pcap_loop: The interface disappeared
 ```
 
 
-В процессе работы собранного тестового стенда можно наблюдать статистику
-переданных байт
+Expected output shows Ethernet, IPv4, 
+and HTTP traffic being forwarded and captured successfully.
 
-![alt text](https://github.com/cubegsm/sfwd/blob/main/demo/Screenshot%20from%202025-06-05%2016-01-43.png)
+для интерфейса tap0:
+![tap0 interface stat](https://github.com/cubegsm/sfwd/blob/main/demo/Screenshot%20from%202025-06-05%2016-01-43.png)
 
+для интерфейса tap1:
 ![alt text](https://github.com/cubegsm/sfwd/blob/main/demo/Screenshot%20from%202025-06-05%2016-01-37.png)
-
-
-Показать картинку 
-
-```bash
-
-```
