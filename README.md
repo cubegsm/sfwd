@@ -288,6 +288,11 @@ tcpdump: pcap_loop: The interface disappeared
 В процессе работы собранного тестового стенда можно наблюдать статистику
 переданных байт
 
+![alt text](https://github.com/cubegsm/sfwd/blob/main/demo/Screenshot%20from%202025-06-05%2016-01-43.png)
+
+![alt text](https://github.com/cubegsm/sfwd/blob/main/demo/Screenshot%20from%202025-06-05%2016-01-37.png)
+
+
 Показать картинку 
 
 ```bash
