@@ -6,29 +6,29 @@ custom requirements. All modifications can be reviewed in the Git commit history
 
 ## Features
 
-    **Multi-core support**
-    Demonstrated with a dual-core configuration.
+**Multi-core support**
+Demonstrated with a dual-core configuration.
 
-    **Multi-queue support**
-    Each port is configured with 2 RX/TX queues for demonstration purposes.
+**Multi-queue support**
+Each port is configured with 2 RX/TX queues for demonstration purposes.
 
-    **Packet Processing Logic**
-    A flexible ACL filtering system based on DPDK’s RTE ACL subsystem. 
-    Includes a parser for user-friendly text-based ACL rule files.
+**Packet Processing Logic**
+A flexible ACL filtering system based on DPDK’s RTE ACL subsystem. 
+Includes a parser for user-friendly text-based ACL rule files.
 
-    **Periodic Real-Time Traffic Statistics**
-    Bandwidth, packet, and byte counters can be observed using external tools
-    such as bmon 
+**Periodic Real-Time Traffic Statistics**
+Bandwidth, packet, and byte counters can be observed using external tools
+such as bmon 
 
-    **Packet Parsing**
-    Parses incoming packets to extract Ethernet/IP headers. 
-    Only IPv4 packets are processed; non-IPv4 traffic is dropped.
+**Packet Parsing**
+Parses incoming packets to extract Ethernet/IP headers. 
+Only IPv4 packets are processed; non-IPv4 traffic is dropped.
 
-    **Header Modification**
-    Supports modification of packet headers, such as destination MAC address.
+**Header Modification**
+Supports modification of packet headers, such as destination MAC address.
 
-    **Logging & Debugging**
-    Integrated with a lightweight logging library based on the open-source project log.c.
+**Logging & Debugging**
+Integrated with a lightweight logging library based on the open-source project log.c.
 
 # Preparing for compilation, resolving dependencies
 
