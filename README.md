@@ -22,7 +22,8 @@ such as bmon
 
 **Packet Parsing**
 - Parses incoming packets to extract Ethernet/IP headers. 
-Only IPv4 packets are processed; non-IPv4 traffic is dropped.
+Only IPv4 packets are processed; non-IPv4 traffic is dropped. 
+In addition, the IP packet was checked for compliance with RFC 1812
 
 **Header Modification**
 - Supports modification of packet headers, such as destination MAC address.

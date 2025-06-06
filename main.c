@@ -1312,43 +1312,7 @@ l3fwd_poll_resource_setup(void)
 	}
 }
 
-static inline int
-l3fwd_service_enable(uint32_t service_id)
-{
-	uint8_t min_service_count = UINT8_MAX;
-	uint32_t slcore_array[RTE_MAX_LCORE];
-	unsigned int slcore = 0;
-	uint8_t service_count;
-	int32_t slcore_count;
-
-	if (!rte_service_lcore_count())
-		return -ENOENT;
-
-	slcore_count = rte_service_lcore_list(slcore_array, RTE_MAX_LCORE);
-	if (slcore_count < 0)
-		return -ENOENT;
-	/* Get the core which has least number of services running. */
-	while (slcore_count--) {
-		/* Reset default mapping */
-		if (rte_service_map_lcore_set(service_id,
-				slcore_array[slcore_count], 0) != 0)
-			return -ENOENT;
-		service_count = rte_service_lcore_count_services(
-				slcore_array[slcore_count]);
-		if (service_count < min_service_count) {
-			slcore = slcore_array[slcore_count];
-			min_service_count = service_count;
-		}
-	}
-	if (rte_service_map_lcore_set(service_id, slcore, 1))
-		return -ENOENT;
-	rte_service_lcore_start(slcore);
-
-	return 0;
-}
-
-int
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
 	struct lcore_conf *qconf;
 	uint16_t queueid, portid;
@@ -1451,7 +1415,7 @@ main(int argc, char **argv)
 	}
 
 	/* clean up config file routes */
-	l3fwd_lkp.free_routes();
+	// l3fwd_lkp.free_routes();
 
 	/* clean up the EAL */
 	rte_eal_cleanup();

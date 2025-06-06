@@ -25,6 +25,10 @@
  */
 #define SENDM_PORT_OVERHEAD(x) (x)
 
+#define RFC1812_OK			0
+#define RFC1812_ERR_NONIP	1
+#define RFC1812_ERR_HDR		2
+
 /*
  * From http://www.rfc-editor.org/rfc/rfc1812.txt section 5.2.2:
  * - The IP version number must be 4.
@@ -33,11 +37,11 @@
  * - The IP total length field must be large enough to hold the IP
  *   datagram header, whose length is specified in the IP header length
  *   field.
- * If we encounter invalid IPV4 packet, then set destination port for it
- * to BAD_PORT value.
+ * If we encounter invalid IPV4 packet, then set return value to
+ *  RFC1812_ERR_HDR
  */
-static __rte_always_inline void
-rfc1812_process(struct rte_ipv4_hdr *ipv4_hdr, uint16_t *dp, uint32_t ptype)
+static __rte_always_inline uint16_t
+rfc1812_process(struct rte_ipv4_hdr *ipv4_hdr, uint32_t ptype)
 {
 	uint8_t ihl;
 
@@ -50,13 +54,16 @@ rfc1812_process(struct rte_ipv4_hdr *ipv4_hdr, uint16_t *dp, uint32_t ptype)
 		if (ihl > IPV4_MAX_VER_IHL_DIFF ||
 				((uint8_t)ipv4_hdr->total_length == 0 &&
 				ipv4_hdr->total_length < IPV4_MIN_LEN_BE))
-			dp[0] = BAD_PORT;
+			return RFC1812_ERR_HDR;
 
+        return RFC1812_OK;
 	}
+    else
+        return RFC1812_ERR_NONIP;
 }
 
 #else
-#define	rfc1812_process(mb, dp, ptype)	do { } while (0)
+#define	rfc1812_process(mb, ptype)	do { } while (0)
 #endif /* DO_RFC_1812_CHECKS */
 
 static __rte_always_inline void

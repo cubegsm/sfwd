@@ -137,8 +137,7 @@ send_burst(struct lcore_conf *qconf, uint16_t n, uint16_t port)
 }
 
 /* Enqueue a single packet, and send burst if queue is filled */
-static inline int
-send_single_packet(struct lcore_conf *qconf,
+static inline int send_single_packet(struct lcore_conf *qconf,
 		   struct rte_mbuf *m, uint16_t port)
 {
 	uint16_t len;

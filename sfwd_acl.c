@@ -1000,6 +1000,7 @@ int acl_main_loop(__rte_unused void *dummy)
 	uint16_t queueid;
 	struct lcore_conf *qconf;
 	int socketid;
+    uint16_t check_result;
 	const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1)
 			/ US_PER_S * BURST_TX_DRAIN_US;
 
@@ -1075,20 +1076,35 @@ int acl_main_loop(__rte_unused void *dummy)
 				struct rte_ether_hdr *eth_hdr;
 
 				for (int j = 0; j < nb_rx; j++) {
-					// Run rfc1812 if packet is ipv4 and checks enabled.
-					rfc1812_process((struct rte_ipv4_hdr *)(rte_pktmbuf_mtod(
+					// run rfc1812 check
+					check_result = rfc1812_process((struct rte_ipv4_hdr *)(rte_pktmbuf_mtod(
 									pkts_burst[j], struct rte_ether_hdr *) + 1),
-									&dst_port, pkts_burst[j]->packet_type);
+									pkts_burst[j]->packet_type);
 
-					// Set MAC addresses.
-					eth_hdr = rte_pktmbuf_mtod(pkts_burst[j], struct rte_ether_hdr *);
-                    *(uint64_t *)&eth_hdr->dst_addr = dest_eth_addr[dst_port];
-					rte_ether_addr_copy(&ports_eth_addr[dst_port], &eth_hdr->src_addr);
+                    switch (check_result) {
+                    	case RFC1812_ERR_NONIP:
+                    	case RFC1812_ERR_HDR: {
+                    		// is not IPv4 packet,
+                    		// or a packet that does not comply with RFC 1812
+                    		rte_pktmbuf_free(pkts_burst[j]);
+                       		break;
+                       	}
+                    	case RFC1812_OK: {
+                    		// set MAC addresses.
+                    		eth_hdr = rte_pktmbuf_mtod(pkts_burst[j], struct rte_ether_hdr *);
+                    		*(uint64_t *)&eth_hdr->dst_addr = dest_eth_addr[dst_port];
+                    		rte_ether_addr_copy(&ports_eth_addr[dst_port], &eth_hdr->src_addr);
 
-                    // TODO: use burst cycles for fast packet forwarding
-					send_single_packet(qconf, pkts_burst[j], dst_port);
+                    		// send packet
+                    		send_single_packet(qconf, pkts_burst[j], dst_port);
+                    		break;
+                    	}
+                    	default: {
+                    		rte_pktmbuf_free(pkts_burst[j]);
+                    		break;
+                    	}
+             		}
 				}
-
 			}
 		}
 	}
