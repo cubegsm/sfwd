@@ -202,12 +202,13 @@ Initializing rx queues on lcore 1 ... rxq=1,0,0 rxq=1,1,0
 Checking link statusdone
 Port 0 Link up at 10 Gbps FDX Fixed
 Port 1 Link up at 10 Gbps FDX Fixed
-L3FWD: >>>> entering main loop on lcore 1
-L3FWD:  -- lcoreid=1 portid=1 rxqueueid=0
-L3FWD:  -- lcoreid=1 portid=1 rxqueueid=1
-L3FWD: >>>> entering main loop on lcore 0
-L3FWD:  -- lcoreid=0 portid=0 rxqueueid=0
-L3FWD:  -- lcoreid=0 portid=0 rxqueueid=1
+23:51:09 TRACE sfwd_acl.c:1016: entering main loop on lcore 1
+23:51:09 TRACE sfwd_acl.c:1021:  -- lcoreid=1 portid=1 rxqueueid=0
+23:51:09 TRACE sfwd_acl.c:1021:  -- lcoreid=1 portid=1 rxqueueid=1
+23:51:09 TRACE sfwd_acl.c:1016: entering main loop on lcore 0
+23:51:09 TRACE sfwd_acl.c:1021:  -- lcoreid=0 portid=0 rxqueueid=0
+23:51:09 TRACE sfwd_acl.c:1021:  -- lcoreid=0 portid=0 rxqueueid=1
+
 ```
 
 # Traffic Replay and Verification
@@ -262,8 +263,8 @@ tcpdump: pcap_loop: The interface disappeared
 Expected output shows Ethernet, IPv4, 
 and HTTP traffic being forwarded and captured successfully.
 
-для интерфейса tap0:
+for tap0 device:
 ![tap0 interface stat](https://github.com/cubegsm/sfwd/blob/main/demo/Screenshot%20from%202025-06-05%2016-01-43.png)
 
-для интерфейса tap1:
+for tap1 device:
 ![alt text](https://github.com/cubegsm/sfwd/blob/main/demo/Screenshot%20from%202025-06-05%2016-01-37.png)
