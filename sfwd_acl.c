@@ -1,13 +1,6 @@
-/* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2022 Intel Corporation
- */
-
 #include "sfwd.h"
 #include "sfwd_route.h"
-
-/*
- * Rule and trace formats definitions.
- */
+#include "log.h"
 
 enum {
 	PROTO_FIELD_IPV4,
@@ -997,8 +990,7 @@ setup_acl(const int socket_id)
 }
 
 /* main processing loop */
-int
-acl_main_loop(__rte_unused void *dummy)
+int acl_main_loop(__rte_unused void *dummy)
 {
 	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
 	unsigned int lcore_id;
@@ -1021,24 +1013,17 @@ acl_main_loop(__rte_unused void *dummy)
 		return 0;
 	}
 
-	RTE_LOG(INFO, L3FWD, ">>>> entering main loop on lcore %u\n", lcore_id);
+	log_trace("entering main loop on lcore %u", lcore_id);
 
 	for (i = 0; i < qconf->n_rx_queue; i++) {
-
 		portid = qconf->rx_queue_list[i].port_id;
 		queueid = qconf->rx_queue_list[i].queue_id;
-		RTE_LOG(INFO, L3FWD,
-			" -- lcoreid=%u portid=%u rxqueueid=%" PRIu16 "\n",
-			lcore_id, portid, queueid);
+		log_trace(" -- lcoreid=%u portid=%u rxqueueid=%" PRIu16, lcore_id, portid, queueid);
 	}
 
 	while (!force_quit) {
-
 		cur_tsc = rte_rdtsc();
 
-		/*
-		 * TX burst queue drain
-		 */
 		diff_tsc = cur_tsc - prev_tsc;
 		if (unlikely(diff_tsc > drain_tsc)) {
 
@@ -1055,11 +1040,7 @@ acl_main_loop(__rte_unused void *dummy)
 			prev_tsc = cur_tsc;
 		}
 
-		/*
-		 * Read packet from RX queues
-		 */
 		for (i = 0; i < qconf->n_rx_queue; ++i) {
-
 			portid = qconf->rx_queue_list[i].port_id;
 			queueid = qconf->rx_queue_list[i].queue_id;
 			nb_rx = rte_eth_rx_burst(portid, queueid,
@@ -1068,61 +1049,46 @@ acl_main_loop(__rte_unused void *dummy)
 			if (nb_rx > 0) {
 				struct acl_search_t acl_search;
 
-				//!!!l3fwd_acl_prepare_acl_parameter(pkts_burst, &acl_search, nb_rx);
-
-				//!!!if (acl_search.num_ipv4) {
-				//	rte_acl_classify(
-				//		acl_config.acx_ipv4[socketid],
-				//		acl_search.data_ipv4,
-				//		acl_search.res_ipv4,
-				//		acl_search.num_ipv4,
-				//		DEFAULT_MAX_CATEGORIES);
+//              TODO:
+//				here you can call the check for compliance of active ACL rules
+//				its need to call:
+//				l3fwd_acl_prepare_acl_parameter(pkts_burst, &acl_search, nb_rx);
+//
+//				run ACL classification using:
+//				rte_acl_classify(
+//				    acl_ctx, // your initialized ACL context
+//				    (const uint8_t **)&acl_param, // input: pointer to ACL parameter(s)
+//				    result, // output result array
+//				    1, // number of packets
+//				    RTE_ACL_MAX_CATEGORIES // categories (usually 1)
+//				);
+//
+//				and check result like:
+//				if (result[0] == RULE_MATCH_DEFAULT) {
+//					// No ACL rule matched
+//				} else {
+//					// A rule matched; result[0] gives the rule priority or user-defined value
+//					printf("Packet matched ACL rule ID: %u\n", result[0]);
+//				}
 
 				uint16_t dst_port = portid == 0 ? 1 : 0;
-				//send_packets_single(qconf, pkts_burst, dst_port, nb_rx);
-
-				//uint32_t j;
 				struct rte_ether_hdr *eth_hdr;
 
 				for (int j = 0; j < nb_rx; j++) {
-					/* Run rfc1812 if packet is ipv4 and checks enabled. */
-					//rfc1812_process((struct rte_ipv4_hdr *)(rte_pktmbuf_mtod(
-					//				pkts[j], struct rte_ether_hdr *) + 1),
-					//				&hops[j], pkts[j]->packet_type);
+					// Run rfc1812 if packet is ipv4 and checks enabled.
+					rfc1812_process((struct rte_ipv4_hdr *)(rte_pktmbuf_mtod(
+									pkts_burst[j], struct rte_ether_hdr *) + 1),
+									&dst_port, pkts_burst[j]->packet_type);
 
-					/* Set MAC addresses. */
+					// Set MAC addresses.
 					eth_hdr = rte_pktmbuf_mtod(pkts_burst[j], struct rte_ether_hdr *);
-					//if (hops[j] != BAD_PORT) {
-						*(uint64_t *)&eth_hdr->dst_addr = dest_eth_addr[dst_port];
-						rte_ether_addr_copy(&ports_eth_addr[dst_port],
-										&eth_hdr->src_addr);
-						send_single_packet(qconf, pkts_burst[j], dst_port);
-					//} else
-					//	rte_pktmbuf_free(pkts[j]);
+                    *(uint64_t *)&eth_hdr->dst_addr = dest_eth_addr[dst_port];
+					rte_ether_addr_copy(&ports_eth_addr[dst_port], &eth_hdr->src_addr);
+
+                    // TODO: use burst cycles for fast packet forwarding
+					send_single_packet(qconf, pkts_burst[j], dst_port);
 				}
 
-				//	l3fwd_acl_send_packets(
-				//		qconf,
-				//		acl_search.m_ipv4,
-				//		acl_search.res_ipv4,
-				//		acl_search.num_ipv4);
-				///}
-
-				/*
-				if (acl_search.num_ipv6) {
-					rte_acl_classify(
-						acl_config.acx_ipv6[socketid],
-						acl_search.data_ipv6,
-						acl_search.res_ipv6,
-						acl_search.num_ipv6,
-						DEFAULT_MAX_CATEGORIES);
-
-					l3fwd_acl_send_packets(
-						qconf,
-						acl_search.m_ipv6,
-						acl_search.res_ipv6,
-						acl_search.num_ipv6);
-				}*/
 			}
 		}
 	}
@@ -1130,14 +1096,12 @@ acl_main_loop(__rte_unused void *dummy)
 }
 
 /* Not used by L3fwd ACL. */
-void *
-acl_get_ipv4_l3fwd_lookup_struct(__rte_unused const int socketid)
+void *acl_get_ipv4_l3fwd_lookup_struct(__rte_unused const int socketid)
 {
 	return NULL;
 }
 
-void *
-acl_get_ipv6_l3fwd_lookup_struct(__rte_unused const int socketid)
+void *acl_get_ipv6_l3fwd_lookup_struct(__rte_unused const int socketid)
 {
 	return NULL;
 }

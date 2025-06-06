@@ -1,12 +1,7 @@
-# SPDX-License-Identifier: BSD-3-Clause
-# Copyright(c) 2010-2016 Intel Corporation
-
-# binary name
 APP = sfwd
 
 # all source are stored in SRCS-y
-SRCS-y := main.c sfwd_acl.c
-
+SRCS-y := main.c sfwd_acl.c log.c
 
 PKGCONF ?= pkg-config
 
