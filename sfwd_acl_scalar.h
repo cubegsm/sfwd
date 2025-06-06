@@ -31,7 +31,7 @@ l3fwd_acl_prepare_one_packet(struct rte_mbuf **pkts_in, struct acl_search_t *acl
 
 static inline void
 l3fwd_acl_prepare_acl_parameter(struct rte_mbuf **pkts_in, struct acl_search_t *acl,
-	int nb_rx)
+int nb_rx)
 {
 	int i;
 
@@ -40,13 +40,11 @@ l3fwd_acl_prepare_acl_parameter(struct rte_mbuf **pkts_in, struct acl_search_t *
 
 	/* Prefetch first packets */
 	for (i = 0; i < PREFETCH_OFFSET && i < nb_rx; i++) {
-		rte_prefetch0(rte_pktmbuf_mtod(
-				pkts_in[i], void *));
+		rte_prefetch0(rte_pktmbuf_mtod(pkts_in[i], void *));
 	}
 
 	for (i = 0; i < (nb_rx - PREFETCH_OFFSET); i++) {
-		rte_prefetch0(rte_pktmbuf_mtod(pkts_in[
-				i + PREFETCH_OFFSET], void *));
+		rte_prefetch0(rte_pktmbuf_mtod(pkts_in[i + PREFETCH_OFFSET], void *));
 		l3fwd_acl_prepare_one_packet(pkts_in, acl, i);
 	}
 

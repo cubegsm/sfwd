@@ -864,16 +864,9 @@ parse_args(int argc, char **argv)
 
 	RTE_SET_USED(lcore_params); /* needed if no eventdev block */
 
-	/*
-	 * Nothing is selected, pick longest-prefix match
-	 * as default match.
-	 */
-	if (lookup_mode == L3FWD_LOOKUP_DEFAULT) {
-		//fprintf(stderr, "Neither ACL, LPM, EM, or FIB selected, defaulting to LPM\n");
-		//lookup_mode = L3FWD_LOOKUP_LPM;
-		fprintf(stderr, "Neither ACL, LPM, EM, or FIB selected, defaulting to LPM\n");
+	// Nothing is selected, pick ACL as default match.
+	if (lookup_mode == L3FWD_LOOKUP_DEFAULT)
 		lookup_mode = L3FWD_LOOKUP_ACL;
-	}
 
 	/* For ACL, update port config rss hash filter */
 	if (lookup_mode == L3FWD_LOOKUP_ACL) {
@@ -889,16 +882,14 @@ parse_args(int argc, char **argv)
 	return ret;
 }
 
-static void
-print_ethaddr(const char *name, const struct rte_ether_addr *eth_addr)
+static void print_ethaddr(const char *name, const struct rte_ether_addr *eth_addr)
 {
 	char buf[RTE_ETHER_ADDR_FMT_SIZE];
 	rte_ether_format_addr(buf, RTE_ETHER_ADDR_FMT_SIZE, eth_addr);
 	printf("%s%s", name, buf);
 }
 
-int
-init_mem(uint16_t portid, unsigned int nb_mbuf)
+int init_mem(uint16_t portid, unsigned int nb_mbuf)
 {
 	struct lcore_conf *qconf;
 	int socketid;

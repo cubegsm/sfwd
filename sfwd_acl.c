@@ -259,8 +259,6 @@ static unsigned int acl_num_ipv4, route_num_ipv4,
 #include "sfwd_acl.h"
 #include "sfwd_acl_scalar.h"
 
-uint8_t simple_acl = 1;
-
 /*
  * Parse IPV6 address, expects the following format:
  * XXXX:XXXX:XXXX:XXXX:XXXX:XXXX:XXXX:XXXX (where X is a hexadecimal digit).
@@ -290,8 +288,7 @@ parse_ipv6_addr(const char *in, const char **end, uint32_t v[IPV6_ADDR_U32],
 	return 0;
 }
 
-static int
-parse_ipv6_net(const char *in, struct rte_acl_field field[4])
+static int parse_ipv6_net(const char *in, struct rte_acl_field field[4])
 {
 	int32_t rc;
 	const char *mp;
@@ -320,8 +317,7 @@ parse_ipv6_net(const char *in, struct rte_acl_field field[4])
 	return 0;
 }
 
-static int
-parse_cb_ipv6_rule(char *str, struct rte_acl_rule *v, int has_userdata)
+static int parse_cb_ipv6_rule(char *str, struct rte_acl_rule *v, int has_userdata)
 {
 	int i, rc;
 	char *s, *sp, *in[CB_FLD_NUM];
@@ -525,14 +521,6 @@ static int acl_add_rules(const char *rule_path,
 			acl_num++;
 	}
 
-	if (route_num == 0) {
-		// add default route
-		route_num = 1;
-		goto finish;
-	}
-		//rte_exit(EXIT_FAILURE, "Not find any route entries in %s!\n",
-		//		rule_path);
-
 	val = fseek(fh, 0, SEEK_SET);
 	if (val < 0) {
 		rte_exit(EXIT_FAILURE, "%s: File seek operation failed\n",
@@ -600,7 +588,6 @@ static int acl_add_rules(const char *rule_path,
 		next->data.category_mask = -1;
 		total_num++;
 	}
-finish:
 	fclose(fh);
 
 	*pacl_base = (struct rte_acl_rule *)acl_rules;
@@ -724,13 +711,10 @@ app_acl_init(struct rte_acl_rule *route_base,
 	memcpy(&acl_build_param.defs, ipv6 ? ipv6_defs : ipv4_defs,
 		ipv6 ? sizeof(ipv6_defs) : sizeof(ipv4_defs));
 
-	if (!simple_acl) {
-		if (rte_acl_build(context, &acl_build_param) != 0)
-			rte_exit(EXIT_FAILURE, "Failed to build ACL trie\n");
+	if (rte_acl_build(context, &acl_build_param) != 0)
+		rte_exit(EXIT_FAILURE, "Failed to build ACL trie\n");
 
-		rte_acl_dump(context);
-	}
-
+	rte_acl_dump(context);
 
 	return context;
 }
@@ -995,7 +979,7 @@ int acl_main_loop(__rte_unused void *dummy)
 	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
 	unsigned int lcore_id;
 	uint64_t prev_tsc, diff_tsc, cur_tsc;
-	int i, nb_rx;
+	int i, j, nb_rx;
 	uint16_t portid;
 	uint16_t queueid;
 	struct lcore_conf *qconf;
@@ -1050,32 +1034,30 @@ int acl_main_loop(__rte_unused void *dummy)
 			if (nb_rx > 0) {
 				struct acl_search_t acl_search;
 
-//              TODO:
-//				here you can call the check for compliance of active ACL rules
-//				its need to call:
-//				l3fwd_acl_prepare_acl_parameter(pkts_burst, &acl_search, nb_rx);
-//
-//				run ACL classification using:
-//				rte_acl_classify(
-//				    acl_ctx, // your initialized ACL context
-//				    (const uint8_t **)&acl_param, // input: pointer to ACL parameter(s)
-//				    result, // output result array
-//				    1, // number of packets
-//				    RTE_ACL_MAX_CATEGORIES // categories (usually 1)
-//				);
-//
-//				and check result like:
-//				if (result[0] == RULE_MATCH_DEFAULT) {
-//					// No ACL rule matched
-//				} else {
-//					// A rule matched; result[0] gives the rule priority or user-defined value
-//					printf("Packet matched ACL rule ID: %u\n", result[0]);
-//				}
+				// ACL classify
+				l3fwd_acl_prepare_acl_parameter(pkts_burst, &acl_search, nb_rx);
 
+				if (acl_search.num_ipv4) {
+					rte_acl_classify(
+						acl_config.acx_ipv4[socketid],
+						acl_search.data_ipv4,
+						acl_search.res_ipv4,
+						acl_search.num_ipv4,
+						DEFAULT_MAX_CATEGORIES);
+				}
+
+                // TODO: extend qconf and define dst_port from qconf,
+                //  but for now use static route
 				uint16_t dst_port = portid == 0 ? 1 : 0;
 				struct rte_ether_hdr *eth_hdr;
 
-				for (int j = 0; j < nb_rx; j++) {
+				for (j = 0; j < nb_rx; j++) {
+                    // check ACL deny signature
+                	if ((acl_search.res_ipv4[j] & ACL_DENY_SIGNATURE) != 0) {
+                          rte_pktmbuf_free(pkts_burst[j]);
+                          continue;
+					}
+
 					// run rfc1812 check
 					check_result = rfc1812_process((struct rte_ipv4_hdr *)(rte_pktmbuf_mtod(
 									pkts_burst[j], struct rte_ether_hdr *) + 1),
