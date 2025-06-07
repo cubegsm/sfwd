@@ -12,6 +12,11 @@ custom requirements. All modifications can be reviewed in the Git commit history
 **Multi-queue support**
 - Each port is configured with 2 RX/TX queues for demonstration purposes.
 
+**Implemented Interface Statistics Collection**
+- Real-time monitoring support 
+- Configurable display update interval 
+- Lock-free aggregation of statistics across all queues
+
 **Packet Processing Logic**
 - A flexible ACL filtering system based on DPDK’s RTE ACL subsystem. 
 Includes a parser for user-friendly text-based ACL rule files.
@@ -41,7 +46,6 @@ lines and parses and validates the rules it reads. If errors are detected, the
 application exits with messages to identify the errors encountered. The ACL rules 
 save the index to the specific rules in the userdata field, while route rules 
 save the forwarding port number.
-
 
 **Periodic Real-Time Traffic Statistics**
 - Bandwidth, packet, and byte counters can be observed using external tools
@@ -192,6 +196,9 @@ supports virtual interfaces like TAP, we use the following setup:
     0x3 in binary is 11, i.e. the first two ports (0 and 1) are active.
     In this case, these correspond to tap0 and tap1.
 
+    --stats_period
+    Determines the frequency of interface statistics output
+
 # Debuging 
 
 After launching, the application outputs detailed logs showing memory pool allocation,
@@ -201,7 +208,8 @@ core assignments, queue configurations, and more:
 
 
 ```bash
-sudo ./sfwd --no-pci -l 0-1 -n 4 --vdev=net_tap0,iface=tap0 --vdev=net_tap1,iface=tap1 -- -p 0x3 --rule_ipv4=/home/sk/work/sfwd/acl_v4.rules --rule_ipv6=/home/sk/work/sfwd/acl_v6.rules --config="(0,0,0),(0,1,0),(1,0,1),(1,1,1)"
+sudo ./sfwd --no-pci -l 0-1 -n 4 --vdev=net_tap0,iface=tap0 --vdev=net_tap1,iface=tap1 -- --stats_period 1 -p 0x3 --rule_ipv4=/home/sk/work/sfwd/acl_v4.rules --rule_ipv6=/home/sk/work/sfwd/acl_v6.rules --config="(0,0,0),(0,1,0),(1,0,1),(1,1,1)"
+[sudo] password for sk: 
 EAL: Detected CPU lcores: 12
 EAL: Detected NUMA nodes: 1
 EAL: Detected shared linkage of DPDK
@@ -209,8 +217,9 @@ EAL: Multi-process socket /var/run/dpdk/rte/mp_socket
 EAL: Selected IOVA mode 'VA'
 EAL: No free 2048 kB hugepages reported on node 0
 TELEMETRY: No legacy callbacks, legacy socket not created
+Stats period 1 sec
 Initializing port 0 ... Creating queues: nb_rxq=2 nb_txq=2... Port 0 modified RSS hash function based on hardware support,requested:0x3bffc configured:0x3afbc
- Address:2A:6B:7F:74:20:4C, Destination:02:00:00:00:00:00, Allocated mbuf pool on socket 0
+ Address:7E:E2:EE:F4:B5:A6, Destination:02:00:00:00:00:00, Allocated mbuf pool on socket 0
 ACL options are:
 rule_ipv4: /home/sk/work/sfwd/acl_v4.rules
 rule_ipv6: /home/sk/work/sfwd/acl_v6.rules
@@ -241,7 +250,7 @@ acl context <l3fwd-acl-ipv60>@0x17cdde340
   num_tries=1
 txq=0,0,0 txq=1,1,0 
 Initializing port 1 ... Creating queues: nb_rxq=2 nb_txq=2... Port 1 modified RSS hash function based on hardware support,requested:0x3bffc configured:0x3afbc
- Address:0A:5C:6C:48:FD:BE, Destination:02:00:00:00:00:01, txq=0,0,0 txq=1,1,0 
+ Address:0A:A2:F8:AC:F1:8E, Destination:02:00:00:00:00:01, txq=0,0,0 txq=1,1,0 
 
 Initializing rx queues on lcore 0 ... rxq=0,0,0 rxq=0,1,0 
 Initializing rx queues on lcore 1 ... rxq=1,0,0 rxq=1,1,0 
@@ -249,12 +258,43 @@ Initializing rx queues on lcore 1 ... rxq=1,0,0 rxq=1,1,0
 Checking link statusdone
 Port 0 Link up at 10 Gbps FDX Fixed
 Port 1 Link up at 10 Gbps FDX Fixed
-18:43:33 TRACE sfwd_acl.c:1001: entering main loop on lcore 1
-18:43:33 TRACE sfwd_acl.c:1006:  -- lcoreid=1 portid=1 rxqueueid=0
-18:43:33 TRACE sfwd_acl.c:1006:  -- lcoreid=1 portid=1 rxqueueid=1
-18:43:33 TRACE sfwd_acl.c:1001: entering main loop on lcore 0
-18:43:33 TRACE sfwd_acl.c:1006:  -- lcoreid=0 portid=0 rxqueueid=0
-18:43:33 TRACE sfwd_acl.c:1006:  -- lcoreid=0 portid=0 rxqueueid=1
+Port 0: rx 00000001 pkts, 000000000000 bytes; tx 00000000 pkts, 000000000000 bytes
+Port 1: rx 00000000 pkts, 000000000000 bytes; tx 00000000 pkts, 000000000000 bytes
+19:02:20 TRACE sfwd_acl.c:1002: entering main loop on lcore 1
+19:02:20 TRACE sfwd_acl.c:1007:  -- lcoreid=1 portid=1 rxqueueid=0
+19:02:20 TRACE sfwd_acl.c:1007:  -- lcoreid=1 portid=1 rxqueueid=1
+19:02:20 TRACE sfwd_acl.c:1002: entering main loop on lcore 0
+19:02:20 TRACE sfwd_acl.c:1007:  -- lcoreid=0 portid=0 rxqueueid=0
+19:02:20 TRACE sfwd_acl.c:1007:  -- lcoreid=0 portid=0 rxqueueid=1
+
+Port 0: rx 00000005 pkts, 000000000266 bytes; tx 00000000 pkts, 000000000000 bytes
+Port 1: rx 00000003 pkts, 000000000266 bytes; tx 00000000 pkts, 000000000000 bytes
+Port 0: rx 00000012 pkts, 000000000941 bytes; tx 00000000 pkts, 000000000000 bytes
+Port 1: rx 00000009 pkts, 000000001039 bytes; tx 00000000 pkts, 000000000000 bytes
+Port 0: rx 00000018 pkts, 000000001750 bytes; tx 00000000 pkts, 000000000000 bytes
+Port 1: rx 00000014 pkts, 000000001750 bytes; tx 00000000 pkts, 000000000000 bytes
+Port 0: rx 00000020 pkts, 000000001946 bytes; tx 00000000 pkts, 000000000000 bytes
+Port 1: rx 00000015 pkts, 000000001946 bytes; tx 00000000 pkts, 000000000000 bytes
+Port 0: rx 00000096 pkts, 000000046973 bytes; tx 00000000 pkts, 000000000000 bytes
+Port 1: rx 00000016 pkts, 000000046973 bytes; tx 00000074 pkts, 000000000000 bytes
+Port 0: rx 00010809 pkts, 000006297804 bytes; tx 00000000 pkts, 000000000000 bytes
+Port 1: rx 00000017 pkts, 000006297804 bytes; tx 00010785 pkts, 000000000000 bytes
+Port 0: rx 00021531 pkts, 000012548584 bytes; tx 00000000 pkts, 000000000000 bytes
+Port 1: rx 00000018 pkts, 000012548584 bytes; tx 00021505 pkts, 000000000000 bytes
+Port 0: rx 00032243 pkts, 000018799219 bytes; tx 00000000 pkts, 000000000000 bytes
+Port 1: rx 00000018 pkts, 000018799219 bytes; tx 00032216 pkts, 000000000000 bytes
+Port 0: rx 00042956 pkts, 000025049996 bytes; tx 00000000 pkts, 000000000000 bytes
+Port 1: rx 00000019 pkts, 000025049996 bytes; tx 00042927 pkts, 000000000000 bytes
+Port 0: rx 00053668 pkts, 000031300765 bytes; tx 00000000 pkts, 000000000000 bytes
+Port 1: rx 00000019 pkts, 000031300765 bytes; tx 00053638 pkts, 000000000000 bytes
+Port 0: rx 00064379 pkts, 000037550687 bytes; tx 00000000 pkts, 000000000000 bytes
+Port 1: rx 00000019 pkts, 000037550687 bytes; tx 00064348 pkts, 000000000000 bytes
+^C
+
+Signal 2 received, preparing to exit...
+Closing port 0... Done
+Closing port 1... Done
+Bye...
 ```
 
 # Traffic Replay and Verification
@@ -343,25 +383,22 @@ TX packets 23  bytes 2780 (2.7 KB)
 TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 ```
 
-#Performance Report and Conclusions
+# Performance Report and Conclusions
 
-Test Environment:
+### Test Environment:
 
     Laptop Model: RedmiBook 2024
-
     Processor: AMD Ryzen 5 5500U (6 cores / 12 threads)
-
     Memory: 16GB DDR5
-
     Network Interface: Virtual TAP interface
 
-Test Configuration:
+### Test Configuration:
 
 Packet transmission was conducted over a virtual TAP interface using two queues. 
 CPU affinity was set such that CPU0 and CPU1 were utilized—logical threads mapped 
 to the same physical core (due to simultaneous multithreading being enabled).
 
-Performance Results:
+### Performance Results:
 
 Under these conditions, the system achieved a maximum throughput of 500Mbit/s. 
 This result reflects the performance limit when using half of a physical CPU core for 
@@ -373,6 +410,7 @@ The peak transmission rate was identified through iterative testing,
 defined as the highest rate at which a low but noticeable rate of transmission errors 
 from the tap0 interface started to occur.
 
+```bash
 ifconfig tap0
 tap0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
 inet6 fe80::4401:70ff:fe1b:7ebf  prefixlen 64  scopeid 0x20<link>
@@ -381,5 +419,4 @@ RX packets 0  bytes 0 (0.0 B)
 RX errors 0  dropped 0  overruns 0  frame 0
 TX packets 4633199  bytes 2703045399 (2.7 GB)
 TX errors 0  dropped 37742 overruns 0  carrier 0  collisions 0
-
-
+```

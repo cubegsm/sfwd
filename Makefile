@@ -1,7 +1,7 @@
 APP = sfwd
 
 # all source are stored in SRCS-y
-SRCS-y := main.c sfwd_acl.c log.c
+SRCS-y := main.c sfwd_acl.c sfwd_stat.c log.c
 
 PKGCONF ?= pkg-config
 

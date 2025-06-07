@@ -44,6 +44,7 @@
 #include <cmdline_parse_etheraddr.h>
 #include "sfwd.h"
 #include "sfwd_route.h"
+#include "sfwd_stat.h"
 
 #define MAX_TX_QUEUE_PER_PORT RTE_MAX_LCORE
 #define MAX_RX_QUEUE_PER_PORT 128
@@ -162,8 +163,7 @@ static struct l3fwd_lkp_mode l3fwd_acl_lkp = {
 };
 
 
-int
-em_check_ptype(int portid)
+int em_check_ptype(int portid)
 {
 	int i, ret;
 	int ptype_l3_ipv4_ext = 0;
@@ -215,8 +215,7 @@ em_check_ptype(int portid)
 	return 0;
 }
 
-static inline void
-em_parse_ptype(struct rte_mbuf *m)
+static inline void em_parse_ptype(struct rte_mbuf *m)
 {
 	struct rte_ether_hdr *eth_hdr;
 	uint32_t packet_type = RTE_PTYPE_UNKNOWN;
@@ -464,8 +463,7 @@ parse_max_pkt_len(const char *pktlen)
 	return len;
 }
 
-static int
-parse_portmask(const char *portmask)
+static int parse_portmask(const char *portmask)
 {
 	char *end = NULL;
 	unsigned long pm;
@@ -476,6 +474,19 @@ parse_portmask(const char *portmask)
 		return 0;
 
 	return pm;
+}
+
+static int parse_dec_value(const char *val)
+{
+    char *end = NULL;
+    unsigned long pm;
+
+    /* parse decimal string */
+    pm = strtoul(val, &end, 10);
+    if ((val[0] == '\0') || (end == NULL) || (*end != '\0'))
+        return 0;
+
+    return pm;
 }
 
 static int
@@ -602,22 +613,9 @@ parse_queue_size(const char *queue_size_arg, uint16_t *queue_size, int rx)
 	*queue_size = value;
 }
 
-static int
-parse_lookup(const char *optarg)
+static int parse_lookup(const char *optarg)
 {
-	if (!strcmp(optarg, "em"))
-		lookup_mode = L3FWD_LOOKUP_EM;
-	else if (!strcmp(optarg, "lpm"))
-		lookup_mode = L3FWD_LOOKUP_LPM;
-	else if (!strcmp(optarg, "fib"))
-		lookup_mode = L3FWD_LOOKUP_FIB;
-	else if (!strcmp(optarg, "acl"))
-		lookup_mode = L3FWD_LOOKUP_ACL;
-	else {
-		fprintf(stderr, "Invalid lookup option! Accepted options: acl, em, lpm, fib\n");
-		return -1;
-	}
-	return 0;
+    lookup_mode = L3FWD_LOOKUP_ACL;
 }
 
 #define MAX_JUMBO_PKT_LEN  9600
@@ -651,6 +649,7 @@ static const char short_options[] =
 #define CMD_LINE_OPT_RULE_IPV4 "rule_ipv4"
 #define CMD_LINE_OPT_RULE_IPV6 "rule_ipv6"
 #define CMD_LINE_OPT_ALG "alg"
+#define CMD_LINE_OPT_STATS_PERIOD "stats_period"
 
 enum {
 	/* long options mapped to a short option */
@@ -679,7 +678,8 @@ enum {
 	CMD_LINE_OPT_LOOKUP_NUM,
 	CMD_LINE_OPT_ENABLE_VECTOR_NUM,
 	CMD_LINE_OPT_VECTOR_SIZE_NUM,
-	CMD_LINE_OPT_VECTOR_TMO_NS_NUM
+	CMD_LINE_OPT_VECTOR_TMO_NS_NUM,
+        CMD_LINE_OPT_STATS_PERIOD_NUM
 };
 
 static const struct option lgopts[] = {
@@ -706,6 +706,7 @@ static const struct option lgopts[] = {
 	{CMD_LINE_OPT_RULE_IPV4,   1, 0, CMD_LINE_OPT_RULE_IPV4_NUM},
 	{CMD_LINE_OPT_RULE_IPV6,   1, 0, CMD_LINE_OPT_RULE_IPV6_NUM},
 	{CMD_LINE_OPT_ALG,   1, 0, CMD_LINE_OPT_ALG_NUM},
+        {CMD_LINE_OPT_STATS_PERIOD,   1, 0, CMD_LINE_OPT_STATS_PERIOD_NUM},
 	{NULL, 0, 0, 0}
 };
 
@@ -856,6 +857,17 @@ parse_args(int argc, char **argv)
 		case CMD_LINE_OPT_ALG_NUM:
 			l3fwd_set_alg(optarg);
 			break;
+		case CMD_LINE_OPT_STATS_PERIOD_NUM:
+		        uint32_t period_time = parse_dec_value(optarg);
+		        if (period_time == 0) {
+		            fprintf(stderr, "Invalid stats period time\n");
+		            print_usage(prgname);
+		            return -1;
+		        }
+		        stat.period = period_time;
+
+		        printf("Stats period %d sec\n", stat.period);
+		        break;
 		default:
 			print_usage(prgname);
 			return -1;
@@ -1008,13 +1020,12 @@ check_all_ports_link_status(uint32_t port_mask)
 	}
 }
 
-static void
-signal_handler(int signum)
+static void signal_handler(int signum)
 {
 	if (signum == SIGINT || signum == SIGTERM) {
-		printf("\n\nSignal %d received, preparing to exit...\n",
-				signum);
+		printf("\n\nSignal %d received, preparing to exit...\n", signum);
 		force_quit = true;
+	        stat_destroy();
 	}
 }
 
@@ -1311,6 +1322,10 @@ int main(int argc, char **argv)
 	uint16_t queue;
 	int ret;
 
+        force_quit = false;
+        signal(SIGINT, signal_handler);
+        signal(SIGTERM, signal_handler);
+
 	/* init EAL */
 	ret = rte_eal_init(argc, argv);
 	if (ret < 0)
@@ -1318,16 +1333,13 @@ int main(int argc, char **argv)
 	argc -= ret;
 	argv += ret;
 
-	force_quit = false;
-	signal(SIGINT, signal_handler);
-	signal(SIGTERM, signal_handler);
-
 	/* pre-init dst MACs for all ports to 02:00:00:00:00:xx */
 	for (portid = 0; portid < RTE_MAX_ETHPORTS; portid++) {
-		dest_eth_addr[portid] =
-			RTE_ETHER_LOCAL_ADMIN_ADDR + ((uint64_t)portid << 40);
+		dest_eth_addr[portid] = RTE_ETHER_LOCAL_ADMIN_ADDR + ((uint64_t)portid << 40);
 		*(uint64_t *)(val_eth + portid) = dest_eth_addr[portid];
 	}
+
+        stat_init();
 
 	/* parse application arguments (after the EAL ones) */
 	ret = parse_args(argc, argv);
@@ -1386,32 +1398,31 @@ int main(int argc, char **argv)
 	check_all_ports_link_status(enabled_port_mask);
 
 	ret = 0;
+        stat_create();
+
 	/* launch per-lcore init on every lcore */
 	rte_eal_mp_remote_launch(l3fwd_lkp.main_loop, NULL, CALL_MAIN);
 
-	{
-		rte_eal_mp_wait_lcore();
+        stat_join();
+        rte_eal_mp_wait_lcore();
 
-		RTE_ETH_FOREACH_DEV(portid) {
-			if ((enabled_port_mask & (1 << portid)) == 0)
-				continue;
-			printf("Closing port %d...", portid);
-			ret = rte_eth_dev_stop(portid);
-			if (ret != 0)
-				printf("rte_eth_dev_stop: err=%d, port=%u\n",
-				       ret, portid);
-			rte_eth_dev_close(portid);
-			printf(" Done\n");
-		}
-	}
+        RTE_ETH_FOREACH_DEV(portid) {
+            if ((enabled_port_mask & (1 << portid)) == 0)
+                continue;
+            printf("Closing port %d...", portid);
+            ret = rte_eth_dev_stop(portid);
+            if (ret != 0)
+                printf("rte_eth_dev_stop: err=%d, port=%u\n",
+                       ret, portid);
+            rte_eth_dev_close(portid);
+            printf(" Done\n");
+        }
 
 	/* clean up config file routes */
 	// l3fwd_lkp.free_routes();
 
 	/* clean up the EAL */
 	rte_eal_cleanup();
-
 	printf("Bye...\n");
-
 	return ret;
 }

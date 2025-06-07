@@ -1,0 +1,27 @@
+BasedOnStyle: WebKit
+AllowShortFunctionsOnASingleLine: Inline
+DerivePointerAlignment: true
+IndentCaseLabels: true
+SortIncludes: Never
+SpaceAfterCStyleCast: true
+UseTab: Never
+BreakBeforeBraces: Custom
+BraceWrapping:
+    AfterClass: true
+    AfterControlStatement: Never
+    AfterEnum: true
+    AfterFunction: true
+    AfterNamespace: true
+    AfterObjCDeclaration: false
+    AfterStruct: true
+    AfterUnion: true
+    BeforeCatch: false
+    BeforeElse: false
+    IndentBraces: false
+ForEachMacros:
+  - clib_bitmap_foreach
+  - pool_foreach
+  - vec_foreach
+  - vec_foreach_index
+  - vec_foreach_index_backwards
+  - RTE_ETH_FOREACH_DEV

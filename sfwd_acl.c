@@ -1,5 +1,6 @@
 #include "sfwd.h"
 #include "sfwd_route.h"
+#include "sfwd_stat.h"
 #include "log.h"
 
 enum {
@@ -1034,6 +1035,10 @@ int acl_main_loop(__rte_unused void *dummy)
 			if (nb_rx > 0) {
 				struct acl_search_t acl_search;
 
+                rte_atomic64_add(&stat.rx_packets[portid], nb_rx);
+                for (int k=0;k<nb_rx;k++)
+                    rte_atomic64_add(&stat.rx_bytes[portid], pkts_burst[k]->pkt_len);
+
 				// ACL classify
 				l3fwd_acl_prepare_acl_parameter(pkts_burst, &acl_search, nb_rx);
 
@@ -1079,6 +1084,8 @@ int acl_main_loop(__rte_unused void *dummy)
 
                     		// send packet
                     		send_single_packet(qconf, pkts_burst[j], dst_port);
+                            rte_atomic64_inc(&stat.tx_packets[dst_port]);
+                            rte_atomic64_add(&stat.rx_bytes[dst_port], pkts_burst[j]->pkt_len);
                     		break;
                     	}
                     	default: {
