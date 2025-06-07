@@ -45,6 +45,7 @@
 #include "sfwd.h"
 #include "sfwd_route.h"
 #include "sfwd_stat.h"
+#include "sfwd_rlimit.h"
 
 #define MAX_TX_QUEUE_PER_PORT RTE_MAX_LCORE
 #define MAX_RX_QUEUE_PER_PORT 128
@@ -1399,6 +1400,7 @@ int main(int argc, char **argv)
 
 	ret = 0;
         stat_create();
+        token_bucket_init();
 
 	/* launch per-lcore init on every lcore */
 	rte_eal_mp_remote_launch(l3fwd_lkp.main_loop, NULL, CALL_MAIN);
@@ -1419,7 +1421,7 @@ int main(int argc, char **argv)
         }
 
 	/* clean up config file routes */
-	// l3fwd_lkp.free_routes();
+	l3fwd_lkp.free_routes();
 
 	/* clean up the EAL */
 	rte_eal_cleanup();

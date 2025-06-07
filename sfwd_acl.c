@@ -1,6 +1,7 @@
 #include "sfwd.h"
 #include "sfwd_route.h"
 #include "sfwd_stat.h"
+#include "sfwd_rlimit.h"
 #include "log.h"
 
 enum {
@@ -1082,10 +1083,18 @@ int acl_main_loop(__rte_unused void *dummy)
                     		*(uint64_t *)&eth_hdr->dst_addr = dest_eth_addr[dst_port];
                     		rte_ether_addr_copy(&ports_eth_addr[dst_port], &eth_hdr->src_addr);
 
-                    		// send packet
-                    		send_single_packet(qconf, pkts_burst[j], dst_port);
-                            rte_atomic64_inc(&stat.tx_packets[dst_port]);
-                            rte_atomic64_add(&stat.rx_bytes[dst_port], pkts_burst[j]->pkt_len);
+                            // call rate limiter
+                            if (!token_bucket_consume(dst_port)) {
+                                rte_pktmbuf_free(pkts_burst[j]);
+                                rte_atomic64_inc(&stat.drop[dst_port]);
+                            }
+                            else
+                            {
+                    		    // send packet
+                    		    send_single_packet(qconf, pkts_burst[j], dst_port);
+                                rte_atomic64_inc(&stat.tx_packets[dst_port]);
+                                rte_atomic64_add(&stat.rx_bytes[dst_port], pkts_burst[j]->pkt_len);
+                            }
                     		break;
                     	}
                     	default: {

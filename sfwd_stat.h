@@ -11,6 +11,7 @@ typedef struct {
   rte_atomic64_t tx_packets[PORTS_MAX];
   rte_atomic64_t rx_bytes[PORTS_MAX];
   rte_atomic64_t tx_bytes[PORTS_MAX];
+  rte_atomic64_t drop[PORTS_MAX];
   volatile uint32_t period;
 } pstat;
 
