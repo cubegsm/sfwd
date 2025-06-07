@@ -19,9 +19,9 @@ custom requirements. All modifications can be reviewed in the Git commit history
 
 **Implemented a simple packet port rate limiting**
 - It is based on the classic token bucket algorithm for controlling 
-- the packet reception rate on a port, allowing an average processing 
-- rate of no more than rate_pps packets per second, while permitting 
-- short bursts of up to burst packets.
+the packet reception rate on a port, allowing an average processing 
+rate of no more than rate_pps packets per second, while permitting 
+short bursts of up to burst packets.
 
 **Packet Processing Logic**
 - A flexible ACL filtering system based on DPDK’s RTE ACL subsystem. 
@@ -40,12 +40,9 @@ acl_v6.rules:
 ```
 
 IPv4 addresses are specified in CIDR format as specified in RFC 4632. 
-For LPM/FIB/ACL they consist of the dot notation for the address and a prefix 
+For ACL they consist of the dot notation for the address and a prefix 
 length separated by ‘/’. For example, 192.168.0.34/32, where the address 
-is 192.168.0.34 and the prefix length is 32. For EM, they consist of just the 
-dot notation for the address and no prefix length. For example, 192.168.0.34, 
-where the Address is 192.168.0.34. EM also includes ports which are specified 
-as a single number which represents a single port.
+is 192.168.0.34 and the prefix length is 32.
 
 The application parses the rules from the file, it ignores empty and comment 
 lines and parses and validates the rules it reads. If errors are detected, the 
@@ -53,9 +50,9 @@ application exits with messages to identify the errors encountered. The ACL rule
 save the index to the specific rules in the userdata field, while route rules 
 save the forwarding port number.
 
-**Periodic Real-Time Traffic Statistics**
+**External periodic real-time traffic statistics support**
 - Bandwidth, packet, and byte counters can be observed using external tools
-such as bmon 
+such as bmon, amon, atop, top, etc
 
 **Packet Parsing**
 - Parses incoming packets to extract Ethernet/IP headers. 
@@ -126,12 +123,13 @@ Command line to run the application:
 
 ```bash
 
-sudo ./sfwd --no-pci -l 0-1 -n 4 
-    --vdev=net_tap0,iface=tap0
-    --vdev=net_tap1,iface=tap1 
-    -- -p 0x3 
-    --rule_ipv4=/home/sk/work/sfwd/acl_v4.rules 
-    --rule_ipv6=/home/sk/work/sfwd/acl_v6.rules 
+sudo ./sfwd --no-pci -l 0-1 -n 4 \
+    --vdev=net_tap0,iface=tap0 \
+    --vdev=net_tap1,iface=tap1  \
+    -- -p 0x3 \
+    --stats_period 1 \
+    --rule_ipv4=/home/sk/work/sfwd/acl_v4.rules \ 
+    --rule_ipv6=/home/sk/work/sfwd/acl_v6.rules \
     --config="(0,0,0),(0,1,0),(1,0,1),(1,1,1)"
 ```
 
@@ -150,7 +148,7 @@ supports virtual interfaces like TAP, we use the following setup:
                      │
                 ┌────▼─────┐
                 │          │  cpu0 recieve packets from port0 in 2 quene
-                │  cfwd    │      and sent it into port1
+                │   cfwd   │      and sent it into port1
                 │          │  cpu1 recieve packets from port1 in 2 quene
                 └────┬─────┘      and sent it into port0
                      │
@@ -215,7 +213,6 @@ core assignments, queue configurations, and more:
 
 ```bash
 sudo ./sfwd --no-pci -l 0-1 -n 4 --vdev=net_tap0,iface=tap0 --vdev=net_tap1,iface=tap1 -- --stats_period 1 -p 0x3 --rule_ipv4=/home/sk/work/sfwd/acl_v4.rules --rule_ipv6=/home/sk/work/sfwd/acl_v6.rules --config="(0,0,0),(0,1,0),(1,0,1),(1,1,1)"
-[sudo] password for sk: 
 EAL: Detected CPU lcores: 12
 EAL: Detected NUMA nodes: 1
 EAL: Detected shared linkage of DPDK
