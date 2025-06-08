@@ -1,6 +1,6 @@
 # Introduction
 
-cfwd — A Simple DPDK-Based Packet Forwarder (based on the l2fwd and l3fwd sample).
+sfwd — A Simple DPDK-Based Packet Forwarder (based on the l2fwd and l3fwd sample).
 This application is a modified version of the standard DPDK samples to meet 
 custom requirements. All modifications can be reviewed in the Git commit history.
 
@@ -12,7 +12,7 @@ custom requirements. All modifications can be reviewed in the Git commit history
 **Multi-queue support**
 - Each port is configured with 2 RX/TX queues for demonstration purposes.
 
-**Implemented Interface Statistics Collection**
+**Implemented interface statistics collection**
 - Real-time monitoring support 
 - Configurable display update interval 
 - Lock-free aggregation of statistics across all queues
@@ -23,7 +23,7 @@ the packet reception rate on a port, allowing an average processing
 rate of no more than rate_pps packets per second, while permitting 
 short bursts of up to burst packets.
 
-**Packet Processing Logic**
+**Packet processing logic**
 - A flexible ACL filtering system based on DPDK’s RTE ACL subsystem. 
 Includes a parser for user-friendly text-based ACL rule files.
   For demonstration purposes, sfwd was launched with ACL filtering enabled 
@@ -54,15 +54,15 @@ save the forwarding port number.
 - Bandwidth, packet, and byte counters can be observed using external tools
 such as bmon, amon, atop, top, etc
 
-**Packet Parsing**
+**Packet parsing**
 - Parses incoming packets to extract Ethernet/IP headers. 
 Only IPv4 packets are processed; non-IPv4 traffic is dropped. 
 In addition, the IP packet was checked for compliance with RFC 1812
 
-**Header Modification**
+**Header modification**
 - Supports modification of packet headers, such as destination MAC address.
 
-**Logging & Debugging**
+**Logging & debugging**
 - Integrated with a lightweight logging library based on the open-source project log.c.
 
 # Preparing for compilation, resolving dependencies
