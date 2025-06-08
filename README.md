@@ -273,18 +273,6 @@ Port 1: rx 00000000 pkts, 000000000000 bytes; tx 00000000 pkts, 000000000000 byt
 Port 0: rx 00000005 pkts, 000000000266 bytes; tx 00000000 pkts, 000000000000 bytes
 Port 1: rx 00000003 pkts, 000000000266 bytes; tx 00000000 pkts, 000000000000 bytes
 
-Port 0: rx 00000012 pkts, 000000000941 bytes; tx 00000000 pkts, 000000000000 bytes
-Port 1: rx 00000009 pkts, 000000001039 bytes; tx 00000000 pkts, 000000000000 bytes
-
-Port 0: rx 00000018 pkts, 000000001750 bytes; tx 00000000 pkts, 000000000000 bytes
-Port 1: rx 00000014 pkts, 000000001750 bytes; tx 00000000 pkts, 000000000000 bytes
-
-Port 0: rx 00000020 pkts, 000000001946 bytes; tx 00000000 pkts, 000000000000 bytes
-Port 1: rx 00000015 pkts, 000000001946 bytes; tx 00000000 pkts, 000000000000 bytes
-
-Port 0: rx 00000096 pkts, 000000046973 bytes; tx 00000000 pkts, 000000000000 bytes
-Port 1: rx 00000016 pkts, 000000046973 bytes; tx 00000074 pkts, 000000000000 bytes
-
 Port 0: rx 00010809 pkts, 000006297804 bytes; tx 00000000 pkts, 000000000000 bytes
 Port 1: rx 00000017 pkts, 000006297804 bytes; tx 00010785 pkts, 000000000000 bytes
 
@@ -296,12 +284,6 @@ Port 1: rx 00000018 pkts, 000018799219 bytes; tx 00032216 pkts, 000000000000 byt
 
 Port 0: rx 00042956 pkts, 000025049996 bytes; tx 00000000 pkts, 000000000000 bytes
 Port 1: rx 00000019 pkts, 000025049996 bytes; tx 00042927 pkts, 000000000000 bytes
-
-Port 0: rx 00053668 pkts, 000031300765 bytes; tx 00000000 pkts, 000000000000 bytes
-Port 1: rx 00000019 pkts, 000031300765 bytes; tx 00053638 pkts, 000000000000 bytes
-
-Port 0: rx 00064379 pkts, 000037550687 bytes; tx 00000000 pkts, 000000000000 bytes
-Port 1: rx 00000019 pkts, 000037550687 bytes; tx 00064348 pkts, 000000000000 bytes
 ^C
 
 Signal 2 received, preparing to exit...
@@ -315,7 +297,7 @@ Bye...
 Replay captured traffic to tap0:
 
 ```bash
-sudo tcpreplay --intf1=tap0 --multiplier=50 --loop=0 http.cap
+sudo tcpreplay --mbps 50 --intf1=tap0 --loop=0 http.cap
 ```
 
 Capture forwarded traffic on tap1:
