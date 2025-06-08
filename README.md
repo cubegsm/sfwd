@@ -115,6 +115,9 @@ dpdk-hugepages.py -p 1G --setup 2G
 
 # Build
 
+mkdir build
+cd build
+cmake ..
 make
 
 # Running the Application
