@@ -145,22 +145,18 @@ struct l3fwd_lkp_mode {
 	int   (*check_ptype)(int);
 	rte_rx_callback_fn cb_parse_ptype;
 	int   (*main_loop)(void *);
-	void* (*get_ipv4_lookup_struct)(int);
-	void* (*get_ipv6_lookup_struct)(int);
 	void  (*free_routes)(void);
 };
 
 static struct l3fwd_lkp_mode l3fwd_lkp;
 
 static struct l3fwd_lkp_mode l3fwd_acl_lkp = {
-	.read_config_files		= read_config_files_acl,
+	.read_config_files	= read_config_files_acl,
 	.setup                  = setup_acl,
 	.check_ptype            = em_check_ptype,
 	.cb_parse_ptype         = em_cb_parse_ptype,
 	.main_loop              = acl_main_loop,
-	.get_ipv4_lookup_struct = acl_get_ipv4_l3fwd_lookup_struct,
-	.get_ipv6_lookup_struct = acl_get_ipv6_l3fwd_lookup_struct,
-	.free_routes			= acl_free_routes,
+	.free_routes		= acl_free_routes,
 };
 
 
@@ -365,8 +361,7 @@ get_port_n_rx_queues(const uint16_t port)
 	return (uint16_t)(++queue);
 }
 
-static int
-init_lcore_rx_queues(void)
+static int init_lcore_rx_queues(void)
 {
 	uint16_t i, nb_rx_queue;
 	uint32_t lcore;
@@ -417,10 +412,6 @@ print_usage(const char *prgname)
 
 		"  -p PORTMASK: Hexadecimal bitmask of ports to configure\n"
 		"  -P : Enable promiscuous mode\n"
-		"  --lookup: Select the lookup method\n"
-		"            Default: lpm\n"
-		"            Accepted: em (Exact Match), lpm (Longest Prefix Match), fib (Forwarding Information Base),\n"
-		"                      acl (Access Control List)\n"
 		"  --config (port,queue,lcore): Rx queue configuration\n"
 		"  --rx-queue-size NPKTS: Rx queue size in decimal\n"
 		"            Default: %d\n"
@@ -447,8 +438,7 @@ print_usage(const char *prgname)
 		ACL_LEAD_CHAR, ROUTE_LEAD_CHAR, alg);
 }
 
-static int
-parse_max_pkt_len(const char *pktlen)
+static int parse_max_pkt_len(const char *pktlen)
 {
 	char *end = NULL;
 	unsigned long len;
@@ -490,8 +480,7 @@ static int parse_dec_value(const char *val)
     return pm;
 }
 
-static int
-parse_config(const char *q_arg)
+static int parse_config(const char *q_arg)
 {
 	char s[256];
 	const char *p, *p0 = q_arg;
@@ -575,11 +564,6 @@ parse_eth_dest(const char *optarg)
 	for (c = 0; c < 6; c++)
 		dest[c] = peer_addr[c];
 	*(uint64_t *)(val_eth + portid) = dest_eth_addr[portid];
-}
-
-static void
-parse_mode(const char *optarg __rte_unused)
-{
 }
 
 static void
@@ -717,8 +701,19 @@ static const struct option lgopts[] = {
  * tx hardware rings, cache per lcore and mtable per port per lcore.
  * RTE_MAX is used to ensure that NB_MBUF never goes below a minimum
  * value of 8192
+ *
+ *  nb_rxd - mbufs ring buffer for one rx queue
+ *  nb_txd - mbufs ring buffer for one tx queue
+ *
+ *  nports*nb_rx_queue*nb_rxd - total mbuf count for rx
+ *  nports*nb_lcores*MAX_PKT_BURST - local mbuf for rx burst
+ *
+ *  nports*nb_tx_queue*nb_txd - total mbuf count for tx
+ *  nports*nb_lcores*MAX_PKT_BURST - local mbuf for tx burst
+ *
+ *  nb_lcores*MEMPOOL_CACHE_SIZE - lcores mbufs caches
  */
-#define NB_MBUF(nports) RTE_MAX(	\
+#define NB_MBUF(nports) RTE_MAX(	        \
 	(nports*nb_rx_queue*nb_rxd +		\
 	nports*nb_lcores*MAX_PKT_BURST +	\
 	nports*n_tx_queue*nb_txd +		\
@@ -830,10 +825,6 @@ parse_args(int argc, char **argv)
 			per_port_pool = 1;
 			break;
 
-		case CMD_LINE_OPT_MODE_NUM:
-			parse_mode(optarg);
-			break;
-
 		case CMD_LINE_OPT_LOOKUP_NUM:
 			if (lookup_mode != L3FWD_LOOKUP_DEFAULT) {
 				fprintf(stderr, "Only one lookup mode is allowed at a time!\n");
@@ -902,9 +893,11 @@ static void print_ethaddr(const char *name, const struct rte_ether_addr *eth_add
 	printf("%s%s", name, buf);
 }
 
+// initialize memory pools
+// create mbuf_pool for each element
+// of the pktmbuf_pool[portid][socketid] array
 int init_mem(uint16_t portid, unsigned int nb_mbuf)
 {
-	struct lcore_conf *qconf;
 	int socketid;
 	unsigned lcore_id;
 	char s[64];
@@ -933,11 +926,9 @@ int init_mem(uint16_t portid, unsigned int nb_mbuf)
 					RTE_MBUF_DEFAULT_BUF_SIZE, socketid);
 			if (pktmbuf_pool[portid][socketid] == NULL)
 				rte_exit(EXIT_FAILURE,
-					"Cannot init mbuf pool on socket %d\n",
-					socketid);
+					"Cannot init mbuf pool on socket %d\n", socketid);
 			else
-				printf("Allocated mbuf pool on socket %d\n",
-					socketid);
+				printf("Allocated mbuf pool on socket %d\n", socketid);
 
 			/* Setup ACL, LPM, EM(f.e Hash) or FIB. But, only once per
 			 * available socket.
@@ -947,19 +938,12 @@ int init_mem(uint16_t portid, unsigned int nb_mbuf)
 				lkp_per_socket[socketid] = 1;
 			}
 		}
-
-		qconf = &lcore_conf[lcore_id];
-		qconf->ipv4_lookup_struct =
-			l3fwd_lkp.get_ipv4_lookup_struct(socketid);
-		qconf->ipv6_lookup_struct =
-			l3fwd_lkp.get_ipv6_lookup_struct(socketid);
 	}
 	return 0;
 }
 
 /* Check the link status of all ports in up to 9s, and print them finally */
-static void
-check_all_ports_link_status(uint32_t port_mask)
+static void check_all_ports_link_status(uint32_t port_mask)
 {
 #define CHECK_INTERVAL 100 /* 100ms */
 #define MAX_CHECK_TIME 90 /* 9s (90 * 100ms) in total */
@@ -1065,8 +1049,7 @@ eth_dev_get_overhead_len(uint32_t max_rx_pktlen, uint16_t max_mtu)
 	return overhead_len;
 }
 
-int
-config_port_max_pkt_len(struct rte_eth_conf *conf,
+int config_port_max_pkt_len(struct rte_eth_conf *conf,
 		struct rte_eth_dev_info *dev_info)
 {
 	uint32_t overhead_len;
@@ -1087,8 +1070,7 @@ config_port_max_pkt_len(struct rte_eth_conf *conf,
 	return 0;
 }
 
-static void
-l3fwd_poll_resource_setup(void)
+static void l3fwd_poll_resource_setup(void)
 {
 	uint8_t socketid;
 	uint16_t nb_rx_queue, queue;

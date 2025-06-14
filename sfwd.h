@@ -84,8 +84,6 @@ struct lcore_conf {
 	uint16_t tx_port_id[RTE_MAX_ETHPORTS];
 	uint16_t tx_queue_id[RTE_MAX_ETHPORTS];
 	struct mbuf_table tx_mbufs[RTE_MAX_ETHPORTS];
-	void *ipv4_lookup_struct;
-	void *ipv6_lookup_struct;
 } __rte_cache_aligned;
 
 extern volatile bool force_quit;
@@ -306,31 +304,5 @@ int
 fib_event_main_loop_tx_q_vector(__rte_unused void *dummy);
 int
 fib_event_main_loop_tx_q_burst_vector(__rte_unused void *dummy);
-
-
-/* Return ipv4/ipv6 fwd lookup struct for ACL, LPM, EM or FIB. */
-void *
-acl_get_ipv4_l3fwd_lookup_struct(const int socketid);
-
-void *
-acl_get_ipv6_l3fwd_lookup_struct(const int socketid);
-
-void *
-em_get_ipv4_l3fwd_lookup_struct(const int socketid);
-
-void *
-em_get_ipv6_l3fwd_lookup_struct(const int socketid);
-
-void *
-lpm_get_ipv4_l3fwd_lookup_struct(const int socketid);
-
-void *
-lpm_get_ipv6_l3fwd_lookup_struct(const int socketid);
-
-void *
-fib_get_ipv4_l3fwd_lookup_struct(const int socketid);
-
-void *
-fib_get_ipv6_l3fwd_lookup_struct(const int socketid);
 
 #endif  /* __L3_FWD_H__ */

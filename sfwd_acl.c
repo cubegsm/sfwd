@@ -1108,14 +1108,3 @@ int acl_main_loop(__rte_unused void *dummy)
 	}
 	return 0;
 }
-
-/* Not used by L3fwd ACL. */
-void *acl_get_ipv4_l3fwd_lookup_struct(__rte_unused const int socketid)
-{
-	return NULL;
-}
-
-void *acl_get_ipv6_l3fwd_lookup_struct(__rte_unused const int socketid)
-{
-	return NULL;
-}
