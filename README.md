@@ -65,6 +65,50 @@ In addition, the IP packet was checked for compliance with RFC 1812
 **Logging & debugging**
 - Integrated with a lightweight logging library based on the open-source project log.c.
 
+
+# ACL rules format breakdown
+
+acl_v4.rules:
+```bash
+@192.168.0.0/16 10.0.0.0/8 1000 : 2000 80 : 80 6/0xff 123
+```
+
+Each part of the rule corresponds to a specific field in an IP packet:
+| **Field**           | **Value**                          | **Meaning**                                      |
+|---------------------|-------------------------------------|--------------------------------------------------|
+| `@192.168.0.0/16`   | Destination IP = 192.168.0.0/16     | Match packets with this destination subnet       |
+| `10.0.0.0/8`        | Source IP = 10.0.0.0/8              | Match packets from this source subnet            |
+| `1000 : 2000`       | Source port range 1000 to 2000      | Match if source port is in this range            |
+| `80 : 80`           | Destination port = 80               | Match destination port 80 (typically HTTP)       |
+| `6/0xff`            | Protocol = 6 (TCP), mask 0xff       | Match TCP protocol only                          |
+| `123`               | Userdata = 123                      | Arbitrary user-defined value for action lookup   |
+
+🔍 What this rule does:
+
+This rule matches IPv4 TCP packets that meet all of the following:
+
+    Source IP is in the 10.0.0.0/8 subnet.
+    Destination IP is in the 192.168.0.0/16 subnet.
+    Source port is in the range 1000–2000.
+    Destination port is exactly 80.
+    Protocol is exactly TCP (6), because of the mask 0xff.
+    If matched, the ACL engine returns userdata = 123.
+
+🧠 About the proto/mask field:
+
+    6/0xff means: compare all 8 bits of the protocol field — the value must exactly match 6 (which is TCP).
+    If the mask was 0x00, it would match any protocol.
+
+✅ How userdata is used:
+
+The userdata value (123 in this case) is returned by rte_acl_classify() when this rule matches a packet. The application decides what to do with the packet based on that value:
+
+    It might mean forward to port X, or
+    It might mean drop (if it's in a deny list), or
+    It could mean mark/flag the packet for later use.
+
+This value is completely up to how the application uses it.
+
 # Preparing for compilation, resolving dependencies
 
 Ensure that DPDK is pre-installed on your system.

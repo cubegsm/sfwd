@@ -122,6 +122,7 @@ static struct rte_eth_conf port_conf = {
 	.rxmode = {
 		.mq_mode = RTE_ETH_MQ_RX_RSS,
 		.offloads = RTE_ETH_RX_OFFLOAD_CHECKSUM,
+
 	},
 	.rx_adv_conf = {
 		.rss_conf = {
@@ -266,20 +267,17 @@ em_cb_parse_ptype(uint16_t port __rte_unused, uint16_t queue __rte_unused,
 /*
  * API's called during initialization to setup ACL/EM/LPM rules.
  */
-void
-l3fwd_set_rule_ipv4_name(const char *optarg)
+void l3fwd_set_rule_ipv4_name(const char *optarg)
 {
 	parm_config.rule_ipv4_name = optarg;
 }
 
-void
-l3fwd_set_rule_ipv6_name(const char *optarg)
+void l3fwd_set_rule_ipv6_name(const char *optarg)
 {
 	parm_config.rule_ipv6_name = optarg;
 }
 
-void
-l3fwd_set_alg(const char *optarg)
+void l3fwd_set_alg(const char *optarg)
 {
 	parm_config.alg = parse_acl_alg(optarg);
 }
@@ -289,14 +287,12 @@ l3fwd_set_alg(const char *optarg)
  * Currently exact-match, longest-prefix-match and forwarding information
  * base are the supported ones.
  */
-static void
-setup_l3fwd_lookup_tables(void)
+static void setup_l3fwd_lookup_tables(void)
 {
 	l3fwd_lkp = l3fwd_acl_lkp;
 }
 
-static int
-check_lcore_params(void)
+static int check_lcore_params(void)
 {
 	uint16_t queue, i;
 	uint32_t lcore;
@@ -322,8 +318,7 @@ check_lcore_params(void)
 	return 0;
 }
 
-static int
-check_port_config(void)
+static int check_port_config(void)
 {
 	uint16_t portid;
 	uint16_t i;
@@ -342,8 +337,7 @@ check_port_config(void)
 	return 0;
 }
 
-static uint16_t
-get_port_n_rx_queues(const uint16_t port)
+static uint16_t get_port_n_rx_queues(const uint16_t port)
 {
 	int queue = -1;
 	uint16_t i;
@@ -385,8 +379,7 @@ static int init_lcore_rx_queues(void)
 }
 
 /* display usage */
-static void
-print_usage(const char *prgname)
+static void print_usage(const char *prgname)
 {
 	char alg[PATH_MAX];
 
@@ -918,6 +911,7 @@ int init_mem(uint16_t portid, unsigned int nb_mbuf)
 		}
 
 		if (pktmbuf_pool[portid][socketid] == NULL) {
+		        printf("creating mboof pool... ");
 			snprintf(s, sizeof(s), "mbuf_pool_%d:%d",
 				 portid, socketid);
 			pktmbuf_pool[portid][socketid] =
@@ -928,7 +922,10 @@ int init_mem(uint16_t portid, unsigned int nb_mbuf)
 				rte_exit(EXIT_FAILURE,
 					"Cannot init mbuf pool on socket %d\n", socketid);
 			else
-				printf("Allocated mbuf pool on socket %d\n", socketid);
+				printf("allocated mbuf pool on socket %d, size %d\n",
+				    socketid, nb_mbuf);
+
+		        fflush(stdout);
 
 			/* Setup ACL, LPM, EM(f.e Hash) or FIB. But, only once per
 			 * available socket.
@@ -1014,8 +1011,7 @@ static void signal_handler(int signum)
 	}
 }
 
-static int
-prepare_ptype_parser(uint16_t portid, uint16_t queueid)
+static int prepare_ptype_parser(uint16_t portid, uint16_t queueid)
 {
 	if (parse_ptype) {
 		printf("Port %d: softly parse packet type info\n", portid);
@@ -1108,14 +1104,14 @@ static void l3fwd_poll_resource_setup(void)
 		}
 
 		/* init port */
-		printf("Initializing port %d ... ", portid );
+		printf("\nInitializing port %d:\n", portid );
 		fflush(stdout);
 
 		nb_rx_queue = get_port_n_rx_queues(portid);
 		n_tx_queue = nb_lcores;
 		if (n_tx_queue > MAX_TX_QUEUE_PER_PORT)
 			n_tx_queue = MAX_TX_QUEUE_PER_PORT;
-		printf("Creating queues: nb_rxq=%d nb_txq=%u... ",
+		printf("Creating queues: nb_rxq=%d nb_txq=%u...\n",
 			nb_rx_queue, (unsigned)n_tx_queue );
 
 		ret = rte_eth_dev_info_get(portid, &dev_info);
@@ -1131,8 +1127,7 @@ static void l3fwd_poll_resource_setup(void)
 				max_pkt_len, portid);
 
 		if (dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE)
-			local_port_conf.txmode.offloads |=
-				RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE;
+			local_port_conf.txmode.offloads |= RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE;
 
 		local_port_conf.rx_adv_conf.rss_conf.rss_hf &=
 			dev_info.flow_type_rss_offloads;
@@ -1164,6 +1159,7 @@ static void l3fwd_poll_resource_setup(void)
 			}
 		}
 
+	        printf("configuring port %d\n", portid);
 		ret = rte_eth_dev_configure(portid, nb_rx_queue,
 					(uint16_t)n_tx_queue, &local_port_conf);
 		if (ret < 0)
@@ -1184,11 +1180,11 @@ static void l3fwd_poll_resource_setup(void)
 				 "Cannot get MAC address: err=%d, port=%d\n",
 				 ret, portid);
 
-		print_ethaddr(" Address:", &ports_eth_addr[portid]);
+		print_ethaddr("port mac src:", &ports_eth_addr[portid]);
 		printf(", ");
-		print_ethaddr("Destination:",
-			(const struct rte_ether_addr *)&dest_eth_addr[portid]);
-		printf(", ");
+		print_ethaddr("mac dst:",
+			(const struct rte_ether_addr *) &dest_eth_addr[portid]);
+		printf("\n");
 
 		/*
 		 * prepare src MACs for each port.
